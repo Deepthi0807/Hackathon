@@ -1,0 +1,35 @@
+import { useNavigate } from 'react-router';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { CheckCircle } from 'lucide-react';
+
+export function ThankYou() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md text-center">
+        <CardHeader>
+          <div className="flex justify-center mb-4">
+            <div className="bg-green-100 p-4 rounded-full">
+              <CheckCircle className="w-12 h-12 text-green-600" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Thank You!</CardTitle>
+          <CardDescription className="text-base mt-4">
+            Your feedback has been submitted successfully. Your input helps us improve the quality of education.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button 
+            onClick={() => navigate('/student')} 
+            className="w-full"
+            size="lg"
+          >
+            Provide More Feedback
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
