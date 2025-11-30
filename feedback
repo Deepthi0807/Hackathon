@@ -1,0 +1,185 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { getCurrentUser, FACULTY, submitFeedback, hasRatedFaculty } from '../utils/auth';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import { Slider } from './ui/slider';
+import { Star } from 'lucide-react';
+
+export function FeedbackForm() {
+  const { facultyId } = useParams();
+  const navigate = useNavigate();
+  const user = getCurrentUser();
+
+  const [ratings, setRatings] = useState({
+    clarity: 0,
+    engagement: 0,
+    pace: 0,
+    interaction: 0,
+    confidenceImprovement: 0,
+  });
+  const [comments, setComments] = useState('');
+
+  if (!user || !facultyId) {
+    navigate('/student');
+    return null;
+  }
+
+  // Check if already rated
+  if (hasRatedFaculty(user.id, facultyId)) {
+    navigate('/student');
+    return null;
+  }
+
+  const faculty = FACULTY.find(f => f.id === facultyId);
+  if (!faculty) {
+    navigate('/student');
+    return null;
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate that all ratings are selected (not 0)
+    if (Object.values(ratings).some(r => r === 0)) {
+      alert('Please provide ratings for all parameters');
+      return;
+    }
+    
+    submitFeedback({
+      studentId: user.id,
+      facultyId: facultyId,
+      clarity: ratings.clarity,
+      engagement: ratings.engagement,
+      pace: ratings.pace,
+      interaction: ratings.interaction,
+      confidenceImprovement: ratings.confidenceImprovement,
+      comments: comments.trim() || undefined,
+      timestamp: Date.now(),
+    });
+
+    // Check if this is the last faculty to rate
+    const totalRated = FACULTY.filter(f => 
+      f.id === facultyId || hasRatedFaculty(user.id, f.id)
+    ).length;
+    
+    if (totalRated === FACULTY.length) {
+      // This was the last faculty - show thank you page
+      navigate('/thank-you');
+    } else {
+      // More faculty to rate - go back to dashboard
+      navigate('/student');
+    }
+  };
+
+  const ratingLabels = ['Not Rated', 'Poor', 'Below Average', 'Average', 'Good', 'Excellent'];
+
+  const renderRatingSlider = (
+    key: keyof typeof ratings,
+    label: string,
+    description: string
+  ) => (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-base">{label}</Label>
+        <p className="text-sm text-gray-500 mt-1">{description}</p>
+      </div>
+      <div className="space-y-2">
+        <Slider
+          value={[ratings[key]]}
+          onValueChange={(value) => setRatings({ ...ratings, [key]: value[0] })}
+          min={0}
+          max={5}
+          step={1}
+          className="w-full"
+        />
+        <div className="flex justify-between items-center">
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`w-5 h-5 ${
+                  star <= ratings[key]
+                    ? 'fill-yellow-400 text-yellow-400'
+                    : 'text-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+          <span className={`text-sm ${ratings[key] === 0 ? 'text-red-500' : 'text-gray-600'}`}>
+            {ratingLabels[ratings[key]]}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Feedback Form</CardTitle>
+            <CardDescription>
+              <div className="mt-2">
+                <p className="text-base text-gray-700">{faculty.name}</p>
+                <p className="text-sm">{faculty.department} • {faculty.subject}</p>
+              </div>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {renderRatingSlider(
+                'clarity',
+                'Teaching Clarity',
+                'How clear and understandable were the lectures and explanations?'
+              )}
+
+              {renderRatingSlider(
+                'engagement',
+                'Student Engagement',
+                'How well did the faculty engage students during class?'
+              )}
+
+              {renderRatingSlider(
+                'pace',
+                'Teaching Pace',
+                'Was the pace of teaching appropriate for the subject matter?'
+              )}
+
+              {renderRatingSlider(
+                'interaction',
+                'Student Interaction',
+                'How approachable and responsive was the faculty to student queries?'
+              )}
+
+              {renderRatingSlider(
+                'confidenceImprovement',
+                'Confidence Improvement',
+                'Did the faculty help improve your confidence in the subject?'
+              )}
+
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="comments">Additional Comments (Optional)</Label>
+                <Textarea
+                  id="comments"
+                  placeholder="Share any additional feedback or suggestions..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+
+              <Button type="submit" className="w-full" size="lg">
+                Submit Feedback
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
